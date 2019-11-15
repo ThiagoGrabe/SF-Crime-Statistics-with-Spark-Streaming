@@ -31,25 +31,20 @@ def udf_convert_time(timestamp):
     return str(date.strftime('%y%m%d%H'))
 
 
-def run_spark_job(spark):
-
-    # TODO Create Spark Configuration
-    # Create Spark configurations with max offset of 200 per trigger
-    # set up correct bootstrap server and port
+def runSpark(spark):
+    
     df = spark \
     .readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", "localhost:9092") \
     .option("subscribe", "service-calls") \
-    .option("maxOffsetPerTrigger", "200") \
+    .option("maxOffsetPerTrigger", "250") \
     .option("startingOffsets", "earliest") \
     .load()
 
     # Show schema for the incoming resources for checks
     df.printSchema()
 
-    # TODO extract the correct column from the kafka input resources
-    # Take only value and convert it to String
     df.selectExpr("CAST(value AS STRING)")
     kafka_df = df.selectExpr("CAST(value AS STRING)")
     service_table = kafka_df\
@@ -85,9 +80,9 @@ def run_spark_job(spark):
 
     # TODO apply aggregations using windows function to see how many calls occurred in 2 day span
     countDataFrame = distinct_table \
-        .withWatermark("call_datetime", "60 minutes") \
+        .withWatermark("call_datetime", "2880 minutes") \
         .groupBy(
-            psf.window(distinct_table.call_datetime, "10 minutes", "5 minutes"),
+            psf.window(distinct_table.call_datetime, "60 minutes", "30 minutes"),
             distinct_table.original_crime_type_name
             ).count()
 
@@ -109,12 +104,14 @@ if __name__ == "__main__":
     spark = SparkSession \
         .builder \
         .appName('SF Crime Statistics with Spark Streaming') \
+        .config(conf=SparkConf())\
+        .enableHiveSupport()
         .master("local") \
         .getOrCreate()
 
-    logger.info("Spark started")
+    logger.info("Spark ON")
 
-    run_spark_job(spark)
+    runSpark(spark)
 
     spark.stop()
 
