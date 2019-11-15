@@ -24,7 +24,6 @@ schema = StructType([
     StructField("original_crime_type_name", StringType(), True)
 ])
 
-# TODO create a spark udf to convert time to YYYYmmDDhh format
 @psf.udf(StringType())
 def udf_convert_time(timestamp):
     date = parse_date(timestamp)
@@ -58,14 +57,14 @@ def runSpark(spark):
                 psf.col('address'),
                 psf.col('disposition'))
 
-    # TODO get different types of original_crime_type_name in 60 minutes interval
+
     counts_df = distinct_table \
         .withWatermark("call_datetime", "60 minutes") \
         .groupBy(
             psf.window(distinct_table.call_datetime, "10 minutes", "5 minutes"),
             distinct_table.original_crime_type_name
             ).count()
-
+            
 
     query = counts_df \
         .writeStream \
@@ -75,26 +74,21 @@ def runSpark(spark):
      
     query.awaitTermination()
 
-    # TODO use udf to convert timestamp to right format on a call_date_time column
-    # converted_df =
 
-    # TODO apply aggregations using windows function to see how many calls occurred in 2 day span
-    countDataFrame = distinct_table \
+    calls_per_2_days = distinct_table \
         .withWatermark("call_datetime", "2880 minutes") \
         .groupBy(
             psf.window(distinct_table.call_datetime, "60 minutes", "30 minutes"),
             distinct_table.original_crime_type_name
             ).count()
 
-    # TODO write output stream
-    query = countDataFrame \
+    query = calls_per_2_days \
         .writeStream \
         .outputMode('complete') \
         .format('console') \
         .start()
 
 
-    # TODO attach a ProgressReporter
     query.awaitTermination()
 
 
