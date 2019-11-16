@@ -99,7 +99,7 @@ if __name__ == "__main__":
         .builder \
         .appName('SF Crime Statistics with Spark Streaming') \
         .config(conf=SparkConf())\
-        .enableHiveSupport()
+        .enableHiveSupport()\
         .master("local") \
         .getOrCreate()
 
