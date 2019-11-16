@@ -65,6 +65,7 @@ def runSpark(spark):
             distinct_table.original_crime_type_name
             ).count()
             
+    counts_df = counts_df['call_date_time'].apply(udf_convert_time)
 
     query = counts_df \
         .writeStream \
